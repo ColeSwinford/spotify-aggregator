@@ -1,207 +1,19 @@
-// TODO: add attribution footer and tlink to github
-
-import React, { useState, useEffect, useMemo, useRef, useCallback, useDeferredValue, memo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, useDeferredValue } from 'react';
 import { 
-  Search, Download, Database, User, Music, Loader2, LogOut, ListMusic, 
-  Copy, Layers, ChevronDown, ChevronsDown, Play, Pause, 
-  Ban, Clock, ArrowUpDown, ArrowUp, ArrowDown
+  Search, Download, Database, User, Music, Loader2, LogOut, 
+  ListMusic, Copy, Layers, ChevronDown, ChevronsDown, Clock
 } from 'lucide-react';
 
-// --- CONFIGURATION ---
-const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID; 
-const REDIRECT_URI = "http://127.0.0.1:5173/";
-const SCOPES = "user-read-private playlist-read-private";
+// --- IMPORTS ---
+import { CLIENT_ID, REDIRECT_URI, SCOPES } from './config';
+import { formatTotalTime } from './utils/formatting';
+import { generateRandomString, generateCodeChallenge, extractSpotifyId } from './utils/spotify';
 
-// --- UTILS ---
-const generateRandomString = (length) => {
-  let text = '';
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < length; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
-};
-
-const generateCodeChallenge = async (codeVerifier) => {
-  const data = new TextEncoder().encode(codeVerifier);
-  const digest = await window.crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode.apply(null, [...new Uint8Array(digest)]))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-};
-
-const extractSpotifyId = (input) => {
-  let cleanId = input.trim();
-  if (cleanId.includes('spotify.com')) {
-    const parts = cleanId.split('/');
-    const lastPart = parts[parts.length - 1];
-    cleanId = lastPart.split('?')[0];
-  }
-  return cleanId;
-};
-
-const formatDuration = (ms) => {
-  const minutes = Math.floor(ms / 60000);
-  const seconds = ((ms % 60000) / 1000).toFixed(0);
-  return minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
-};
-
-const formatTotalTime = (ms) => {
-  const hours = Math.floor(ms / 3600000);
-  const minutes = Math.floor((ms % 3600000) / 60000);
-  if (hours > 0) return `${hours} hr ${minutes} min`;
-  return `${minutes} min`;
-};
-
-// --- OPTIMIZED SUB-COMPONENTS ---
-
-// Memoized Button prevents re-renders when parent state changes but button props don't
-const Button = memo(({ children, onClick, variant = 'primary', disabled = false, icon: Icon, spinIcon = false, className = '' }) => {
-  const baseStyle = "flex items-center justify-center px-6 py-2 rounded-full font-bold text-sm transition-transform duration-100 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100";
-  
-  const variants = {
-    primary: "bg-[#1ed760] hover:bg-[#1fdf64] text-black hover:scale-105", 
-    secondary: "bg-white text-black hover:scale-105", 
-    outline: "bg-transparent border border-[#727272] text-white hover:border-white hover:scale-105", 
-    ghost: "bg-transparent text-[#b3b3b3] hover:text-white hover:bg-[#ffffff10] !px-4", 
-    danger: "bg-transparent text-[#f15e6c] border border-[#f15e6c] hover:bg-[#f15e6c] hover:text-white"
-  };
-
-  return (
-    <button 
-      onClick={onClick} 
-      disabled={disabled} 
-      className={`${baseStyle} ${variants[variant]} ${className}`}
-    >
-      {Icon && <Icon size={18} className={`mr-2 ${spinIcon ? 'animate-spin' : ''}`} />}
-      {children}
-    </button>
-  );
-});
-
-const Badge = memo(({ children, onClick }) => {
-  return (
-    <span 
-      onClick={onClick}
-      className="px-2 py-1 rounded-sm text-[11px] font-medium transition-colors cursor-pointer bg-[#2a2a2a] text-white text-opacity-90 hover:bg-[#333]"
-    >
-      {children}
-    </span>
-  );
-});
-
-const SortHeader = memo(({ label, sortKey, currentSort, onSort, className = "" }) => {
-  const isActive = currentSort.key === sortKey;
-  return (
-    <th 
-      className={`p-4 cursor-pointer group transition-colors hover:text-white ${isActive ? 'text-[#1ed760]' : ''} ${className}`}
-      onClick={() => onSort(sortKey)}
-    >
-      <div className="flex items-center gap-2">
-        {label}
-        {isActive && (
-          currentSort.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
-        )}
-        {!isActive && <ArrowUpDown size={12} className="opacity-0 group-hover:opacity-50" />}
-      </div>
-    </th>
-  );
-});
-
-// Heavily optimized Table Row. Only re-renders if THIS specific track's playing state changes
-const TrackRow = memo(({ track, index, isPlaying, onTogglePreview }) => {
-  return (
-    <tr className="hover:bg-[#2a2a2a] group transition-colors cursor-default">
-      <td className="p-4 text-center font-mono text-xs w-12 relative">
-        <span className="group-hover:hidden">{index + 1}</span>
-        <button 
-          onClick={() => onTogglePreview(track.id, track.preview_url)}
-          className={`absolute inset-0 m-auto w-full h-full items-center justify-center ${isPlaying ? 'flex' : 'hidden group-hover:flex'}`}
-        >
-          {track.preview_url ? (
-            isPlaying ? <Pause size={16} className="text-[#1ed760]" fill="currentColor"/> : <Play size={16} className="text-white" fill="currentColor"/>
-          ) : (
-            <Ban size={14} className="text-[#535353]" />
-          )}
-        </button>
-      </td>
-      
-      <td className="p-4 max-w-[250px]">
-        <div className="flex items-center gap-3">
-          <div className="relative w-10 h-10 shrink-0">
-            {track.album.images[2] ? (
-              <img 
-                src={track.album.images[2].url} 
-                alt="" 
-                loading="lazy" // Performance: Native lazy loading
-                className="w-full h-full rounded shadow-sm" 
-              />
-            ) : (
-              <div className="w-full h-full bg-[#282828] rounded flex items-center justify-center">
-                <Music size={16} />
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col overflow-hidden">
-            <a 
-              href={track.external_urls?.spotify || '#'} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={`font-medium text-sm truncate hover:underline decoration-[#1ed760] underline-offset-2 ${isPlaying ? 'text-[#1ed760]' : 'text-white'}`}
-            >
-              {track.name}
-            </a>
-            <span className="text-xs truncate group-hover:text-white transition-colors">
-              {track.artists.map((artist, idx) => (
-                <span key={idx}>
-                  {idx > 0 && ", "}
-                  <a href={artist.external_urls?.spotify} target="_blank" rel="noreferrer" className="hover:underline">{artist.name}</a>
-                </span>
-              ))}
-            </span>
-          </div>
-        </div>
-      </td>
-      
-      <td className="p-4 hidden sm:table-cell text-xs group-hover:text-white transition-colors truncate max-w-[200px]">
-        <a href={track.album.external_urls?.spotify} target="_blank" rel="noreferrer" className="hover:underline">
-          {track.album.name}
-        </a>
-      </td>
-      
-      <td className="p-4 hidden md:table-cell">
-        <a 
-          href={`https://open.spotify.com/playlist/${track.playlistId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:opacity-80 transition-opacity"
-        >
-          <Badge>{track.playlistName}</Badge>
-        </a>
-      </td>
-
-      <td className="p-4 text-right pr-8 font-mono text-xs">
-        {formatDuration(track.duration_ms)}
-      </td>
-    </tr>
-  );
-}, (prevProps, nextProps) => {
-  // Custom comparison for performance: Only re-render if playing state changed for THIS track
-  return (
-    prevProps.isPlaying === nextProps.isPlaying && 
-    prevProps.track === nextProps.track &&
-    prevProps.index === nextProps.index
-  );
-});
-
-const Card = ({ children, className = '' }) => (
-  <div className={`bg-[#121212] rounded-lg p-6 ${className}`}>
-    {children}
-  </div>
-);
-
-// --- MAIN APP ---
+// --- COMPONENTS ---
+import Button from './components/Button';
+import Card from './components/Card';
+import SortHeader from './components/SortHeader';
+import TrackRow from './components/TrackRow';
 
 export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem('sp_access_token') || null);
@@ -218,7 +30,6 @@ export default function App() {
   
   // Filter & Sort State
   const [searchQuery, setSearchQuery] = useState('');
-  // Performance: Defers filtering until after input renders, making typing feel instant
   const deferredSearchQuery = useDeferredValue(searchQuery);
   
   const [showDuplicates, setShowDuplicates] = useState(false);
@@ -316,6 +127,7 @@ export default function App() {
 
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+  // NOTE: In a larger app, this fetch logic would move to a custom hook (e.g., useSpotifyImporter)
   const fetchWithBackoff = async (url, retries = 3) => {
     try {
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
@@ -431,7 +243,7 @@ export default function App() {
         setStatus('error');
       }
     }
-  }, [targetInput, importMode, token]); // Added dependencies for callback
+  }, [targetInput, importMode, token]);
 
   // --- SORTING & FILTERING ---
 
@@ -445,7 +257,6 @@ export default function App() {
     });
   }, []);
 
-  // Logic simplified but functionality identical
   const uniquePlaylists = useMemo(() => {
     const map = new Map();
     allTracks.forEach(t => {
@@ -473,7 +284,6 @@ export default function App() {
       data = data.filter(track => idCounts[track.id] > 1);
     }
 
-    // Use deferredSearchQuery here instead of raw searchQuery
     if (deferredSearchQuery) {
       const lowerQ = deferredSearchQuery.toLowerCase();
       data = data.filter(t => 
@@ -547,13 +357,12 @@ export default function App() {
   }, [filteredTracks]);
 
   // --- RENDER ---
-
+  // The logic for the JSX return remains largely the same, but now uses the imported components.
+  // ... [The rest of your JSX from the original file goes here] ...
   return (
     <div className="min-h-screen bg-black text-white font-sans p-4 sm:p-8">
-      <div className="max-w-[1600px] mx-auto space-y-8">
-        
-        {/* HEADER */}
-        <header className="flex flex-col md:flex-row justify-between items-center gap-6 pb-6">
+      {/* ... Header ... */}
+      <header className="flex flex-col md:flex-row justify-between items-center gap-6 pb-6">
           <div className="flex items-center gap-4">
             <div className="bg-[#1ed760] p-3 rounded-full shadow-lg shadow-green-900/20">
               <Database className="text-black" size={32} strokeWidth={2.5} />
@@ -572,9 +381,9 @@ export default function App() {
           )}
         </header>
 
-        {!token ? (
-          // LOGIN CARD
-          <div className="flex flex-col items-center justify-center py-20">
+      {!token ? (
+        // LOGIN CARD
+        <div className="flex flex-col items-center justify-center py-20">
             <div className="bg-[#121212] p-10 rounded-lg max-w-md w-full text-center space-y-8 border border-[#282828]">
               <h2 className="text-2xl font-bold text-white">Log in to Spotify</h2>
               <div className="bg-[#242424] p-4 rounded-md text-left text-xs text-[#b3b3b3] font-mono break-all">
@@ -584,14 +393,15 @@ export default function App() {
               <Button onClick={handleLogin} className="w-full py-4 text-base tracking-wide uppercase">Connect App</Button>
             </div>
           </div>
-        ) : (
-          // MAIN GRID
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            {/* LEFT SIDEBAR */}
-            <div className="lg:col-span-3 space-y-6 flex flex-col h-auto lg:h-[800px] relative lg:sticky lg:top-8">
-              <Card className="space-y-6 border border-[#282828] shrink-0">
-                <h3 className="font-bold text-lg">Import Sources</h3>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* LEFT SIDEBAR */}
+          <div className="lg:col-span-3 space-y-6 flex flex-col h-auto lg:h-[800px] relative lg:sticky lg:top-8">
+            <Card className="space-y-6 border border-[#282828] shrink-0">
+               {/* ... Import Controls using Button and Icons ... */}
+               <h3 className="font-bold text-lg">Import Sources</h3>
+               {/* ... (Keep existing sidebar JSX) ... */}
                 <div className="grid grid-cols-3 bg-[#000000] rounded-lg p-1 gap-1">
                   {[{ id: 'user', label: 'Profile', icon: User }, { id: 'playlist', label: 'Playlist', icon: ListMusic }, { id: 'multi', label: 'Merge', icon: Layers }].map((mode) => (
                     <button
@@ -608,7 +418,7 @@ export default function App() {
                     <textarea
                       value={targetInput}
                       onChange={(e) => setTargetInput(e.target.value)}
-                      placeholder={`https://open.spotify.com/playlist/...\nhttps://open.spotify.com/playlist/...`}
+                      placeholder={`https://open.spotify.com/playlist/...`}
                       className="w-full h-24 bg-[#242424] text-white rounded-md p-3 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-white/20 resize-none placeholder-[#727272]"
                     />
                   ) : (
@@ -631,7 +441,6 @@ export default function App() {
                   {status === 'idle' ? 'Fetch Data' : status === 'complete' ? 'Fetch New' : 'Fetching...'}
                 </Button>
 
-                {/* Status Indicator with Progress Bar */}
                 {status !== 'idle' && (
                   <div className="bg-[#242424] rounded-lg p-4 space-y-3">
                     <div className="flex justify-between text-xs font-medium">
@@ -664,8 +473,7 @@ export default function App() {
                     </div>
                   </div>
                 )}
-
-                {/* Logs Console */}
+                 {/* Logs Console */}
                 <div className="bg-black rounded-md p-3 h-48 overflow-y-auto font-mono text-[10px] leading-relaxed border border-[#282828]">
                   {logs.length === 0 && <span className="text-[#535353]">System ready...</span>}
                   {logs.map((log, i) => (
@@ -675,15 +483,15 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-              </Card>
-            </div>
+            </Card>
+          </div>
 
-            {/* RIGHT CONTENT (DATA TABLE) */}
-            <div className="lg:col-span-9 flex flex-col h-[600px] lg:h-[800px]">
-              <Card className="flex-1 flex flex-col overflow-hidden border border-[#282828] !p-0">
-                
-                {/* Toolbar */}
-                <div className="p-4 border-b border-[#282828] flex flex-col gap-4 bg-[#121212] sticky top-0 z-20">
+          {/* RIGHT CONTENT */}
+          <div className="lg:col-span-9 flex flex-col h-[600px] lg:h-[800px]">
+            <Card className="flex-1 flex flex-col overflow-hidden border border-[#282828] !p-0">
+              
+              {/* Toolbar */}
+              <div className="p-4 border-b border-[#282828] flex flex-col gap-4 bg-[#121212] sticky top-0 z-20">
                   <div className="flex items-center justify-between gap-4">
                     <div className="relative flex-1 max-w-md">
                       <Search className="absolute left-3 top-2.5 text-[#b3b3b3]" size={18} />
@@ -732,69 +540,79 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Table */}
-                <div className="flex-1 overflow-auto bg-[#121212]">
-                  <table className="w-full text-left text-sm text-[#b3b3b3] relative">
-                    <thead className="bg-[#181818] text-[#b3b3b3] sticky top-0 z-10 text-xs uppercase tracking-wider font-medium border-b border-[#282828]">
+              {/* Table */}
+              <div className="flex-1 overflow-auto bg-[#121212]">
+                <table className="w-full text-left text-sm text-[#b3b3b3] relative">
+                  <thead className="bg-[#181818] text-[#b3b3b3] sticky top-0 z-10 text-xs uppercase tracking-wider font-medium border-b border-[#282828]">
+                    <tr>
+                      <th className="p-4 w-12 text-center">#</th>
+                      <SortHeader label="Title" sortKey="name" currentSort={sortConfig} onSort={handleSort} />
+                      <SortHeader label="Album" sortKey="album" currentSort={sortConfig} onSort={handleSort} className="hidden sm:table-cell" />
+                      <SortHeader label="Playlist" sortKey="playlistName" currentSort={sortConfig} onSort={handleSort} className="hidden md:table-cell" />
+                      <SortHeader label={<Clock size={16}/>} sortKey="duration" currentSort={sortConfig} onSort={handleSort} className="w-24 text-right pr-8" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#282828]">
+                    {filteredTracks.length === 0 ? (
                       <tr>
-                        <th className="p-4 w-12 text-center">#</th>
-                        <SortHeader label="Title" sortKey="name" currentSort={sortConfig} onSort={handleSort} />
-                        <SortHeader label="Album" sortKey="album" currentSort={sortConfig} onSort={handleSort} className="hidden sm:table-cell" />
-                        <SortHeader label="Playlist" sortKey="playlistName" currentSort={sortConfig} onSort={handleSort} className="hidden md:table-cell" />
-                        <SortHeader label={<Clock size={16}/>} sortKey="duration" currentSort={sortConfig} onSort={handleSort} className="w-24 text-right pr-8" />
+                        <td colSpan={5} className="p-20 text-center text-[#535353]">
+                          <Music size={64} className="mx-auto mb-6 opacity-20" />
+                          <p className="text-lg font-medium">{status === 'idle' ? 'Ready to import' : 'No matching tracks found'}</p>
+                          {status === 'idle' && <p className="text-sm mt-2">Select a source on the left to begin.</p>}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#282828]">
-                      {filteredTracks.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="p-20 text-center text-[#535353]">
-                            <Music size={64} className="mx-auto mb-6 opacity-20" />
-                            <p className="text-lg font-medium">{status === 'idle' ? 'Ready to import' : 'No matching tracks found'}</p>
-                            {status === 'idle' && <p className="text-sm mt-2">Select a source on the left to begin.</p>}
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredTracks.slice(0, visibleLimit).map((track, i) => (
-                          <TrackRow 
-                            key={`${track.id}-${i}`} 
-                            track={track} 
-                            index={i} 
-                            isPlaying={playingTrackId === track.id} 
-                            onTogglePreview={togglePreview} 
-                          />
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                  
-                  {filteredTracks.length > visibleLimit && (
-                    <div className="p-8 border-t border-[#282828] flex flex-col items-center gap-4 bg-gradient-to-b from-[#121212] to-black">
-                      <span className="text-xs text-[#727272]">
-                        Showing {visibleLimit} of {filteredTracks.length} tracks
-                      </span>
-                      <div className="flex gap-3">
-                        <Button variant="outline" onClick={() => setVisibleLimit(prev => prev + 500)} icon={ChevronDown}>
-                          Show More
-                        </Button>
-                        <Button variant="ghost" onClick={() => setVisibleLimit(filteredTracks.length)} icon={ChevronsDown}>
-                          Show All
-                        </Button>
-                      </div>
+                    ) : (
+                      filteredTracks.slice(0, visibleLimit).map((track, i) => (
+                        <TrackRow 
+                          key={`${track.id}-${i}`} 
+                          track={track} 
+                          index={i} 
+                          isPlaying={playingTrackId === track.id} 
+                          onTogglePreview={togglePreview} 
+                        />
+                      ))
+                    )}
+                  </tbody>
+                </table>
+                
+                {filteredTracks.length > visibleLimit && (
+                  <div className="p-8 border-t border-[#282828] flex flex-col items-center gap-4 bg-gradient-to-b from-[#121212] to-black">
+                    <span className="text-xs text-[#727272]">
+                      Showing {visibleLimit} of {filteredTracks.length} tracks
+                    </span>
+                    <div className="flex gap-3">
+                      <Button variant="outline" onClick={() => setVisibleLimit(prev => prev + 500)} icon={ChevronDown}>
+                        Show More
+                      </Button>
+                      <Button variant="ghost" onClick={() => setVisibleLimit(filteredTracks.length)} icon={ChevronsDown}>
+                        Show All
+                      </Button>
                     </div>
-                  )}
-                </div>
-              </Card>
-            </div>
+                  </div>
+                )}
+              </div>
+            </Card>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* FOOTER */}
-        <footer className="text-center text-xs text-[#727272] pt-8 mt-8 border-t border-[#282828]">
+      {/* FOOTER */}
+      <footer className="text-center text-xs text-[#727272] pt-8 mt-8 border-t border-[#282828] pb-8">
           <p>This is a third-party tool and is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Spotify.</p>
           <p className="mt-2">All Spotify logos and trademarks are property of Spotify AB.</p>
+          
+          <p className="mt-6 text-[#b3b3b3]">
+            Designed and built by{' '}
+            <a 
+              href="https://github.com/ColeSwinford/spotify-aggregator" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-white hover:text-[#1ed760] hover:underline transition-colors font-medium"
+            >
+              Cole Swinford
+            </a>
+          </p>
         </footer>
-
-      </div>
     </div>
   );
 }

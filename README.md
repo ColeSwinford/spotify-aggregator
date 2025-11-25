@@ -1,16 +1,23 @@
-# React + Vite
+# Spotify Aggregator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A robust React application designed to aggregate, filter, sort, and export Spotify playlists. This tool allows users to fetch tracks from public user profiles, individual playlists, or merge multiple sources into a single, deduplicated dataset exportable to CSV.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+* **Multi-Source Import:** Fetch tracks from a User Profile, a specific Playlist, or merge multiple playlists via URL.
+* **Deep Filtering:** Real-time search across Track Name, Artist, and Album.
+* **Duplicate Detection:** Instantly identify and filter duplicate tracks across massive libraries.
+* **Data Export:** Export your entire curated list to `.csv` for use in Excel or other data tools.
+* **Audio Previews:** Native audio playback for track previews directly in the table (when supported by Spotify).
+* **Performance:** Optimized and memoized components to handle large datasets (1000+ songs) without UI lag.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+* **Frontend:** React + Vite
+* **Styling:** Tailwind CSS
+* **Icons:** Lucide React
+* **Language:** JavaScript
 
-## Expanding the ESLint configuration
+## Disclaimer
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+This project is a third-party tool and is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Spotify.
