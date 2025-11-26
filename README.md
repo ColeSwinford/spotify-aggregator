@@ -1,4 +1,4 @@
-# Spotify Aggregator
+# [Spotify Aggregator](https://coleswinford.github.io/spotify-aggregator/)
 
 A robust React application designed to aggregate, filter, sort, and export Spotify playlists. This tool allows users to fetch tracks from public user profiles, individual playlists, or merge multiple sources into a single, deduplicated dataset exportable to CSV.
 
