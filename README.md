@@ -2,6 +2,8 @@
 
 A robust React application designed to aggregate, filter, sort, and export Spotify playlists. This tool allows users to fetch tracks from public user profiles, individual playlists, or merge multiple sources into a single, deduplicated dataset exportable to CSV.
 
+![screenshot of app in use](public/Spotify_Aggregator.png)
+
 ## Features
 
 * **Multi-Source Import:** Fetch tracks from a User Profile, a specific Playlist, or merge multiple playlists via URL.
