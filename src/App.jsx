@@ -385,17 +385,22 @@ export default function App() {
         // LOGIN CARD
         <div className="flex flex-col items-center justify-center py-20">
             <div className="bg-[#121212] p-10 rounded-lg max-w-md w-full text-center space-y-8 border border-[#282828]">
-              <h2 className="text-2xl font-bold text-white">Log in to Spotify</h2>
-              <div className="bg-[#242424] p-4 rounded-md text-left text-xs text-[#b3b3b3] font-mono break-all">
-                <span className="block mb-2 text-white font-bold uppercase tracking-wider text-[10px]">Redirect URI Setup</span>
+            <h2 className="text-2xl font-bold text-white">Log in to Spotify</h2>
+            {/* Only show this block if we are in Development mode */}
+            {import.meta.env.DEV && (
+              <div className="bg-[#242424] p-4 rounded-md text-left text-xs text-[#b3b3b3] font-mono break-all border border-yellow-500/30">
+                <span className="block mb-2 text-white font-bold uppercase tracking-wider text-[10px] text-yellow-500">
+                  Developer Setup (Dev Mode Only)
+                </span>
+                <span className="opacity-50 block mb-1">Add this to Spotify Dashboard:</span>
                 {REDIRECT_URI}
               </div>
-              <Button onClick={handleLogin} className="w-full py-4 text-base tracking-wide uppercase">Connect App</Button>
+            )}
+            <Button onClick={handleLogin} className="w-full py-4 text-base tracking-wide uppercase">Connect App</Button>
             </div>
           </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
           {/* LEFT SIDEBAR */}
           <div className="lg:col-span-3 space-y-6 flex flex-col h-auto lg:h-[800px] relative lg:sticky lg:top-8">
             <Card className="space-y-6 border border-[#282828] shrink-0">
@@ -426,7 +431,7 @@ export default function App() {
                       type="text"
                       value={targetInput}
                       onChange={(e) => setTargetInput(e.target.value)}
-                      placeholder={importMode === 'user' ? "e.g. spotify" : "https://open.spotify.com/playlist/..."}
+                      placeholder={importMode === 'user' ? "https://open.spotify.com/user/..." : "https://open.spotify.com/playlist/..."}
                       className="w-full bg-[#242424] text-white rounded-full py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-white/20 placeholder-[#727272]"
                     />
                   )}
