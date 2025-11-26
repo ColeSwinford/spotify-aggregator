@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;   /* Necessary for ensuring iOS 26 Safari themes correctly (prevent white top and bottom borders of page) */ 
+}

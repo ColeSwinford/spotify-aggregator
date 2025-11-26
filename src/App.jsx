@@ -43,10 +43,6 @@ export default function App() {
 
   // --- AUTHENTICATION ---
   const handleLogin = useCallback(async () => {
-    if (!CLIENT_ID || CLIENT_ID === "PASTE_YOUR_CLIENT_ID_HERE") {
-      alert("Client ID missing! Check your .env file and restart the server.");
-      return;
-    }
     const verifier = generateRandomString(128);
     const challenge = await generateCodeChallenge(verifier);
     localStorage.setItem("sp_verifier", verifier);
