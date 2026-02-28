@@ -8,12 +8,26 @@ A robust React application designed to aggregate, filter, sort, and export Spoti
 
 ## Features
 
-* **Multi-Source Import:** Fetch tracks from a User Profile, a specific Playlist, or merge multiple playlists via URL.
+* **Multi-Source Import:** Fetch tracks from a user profile, a playlist, or multiple specific playlists.
 * **Deep Filtering:** Real-time search across Track Name, Artist, and Album.
 * **Duplicate Detection:** Instantly identify and filter duplicate tracks across massive libraries.
-* **Data Export:** Export your entire curated list to `.csv` for use in Excel or other data tools.
+* **Data Export:** Export your entire curated list to `.csv`. This could be an entire profile, one playlist, or playlists merged from many different profiles.
 * **Audio Previews:** Native audio playback for track previews directly in the table (when supported by Spotify).
 * **Performance:** Optimized and memoized components to handle large datasets (1000+ songs) without UI lag.
+
+## Demo
+
+### Profile
+
+![DEMO-profile](public/DEMO-profile.gif)
+
+### Playlist
+
+![DEMO-playlist](public/DEMO-playlist.gif)
+
+### Playlist Merge + Export
+
+![DEMO-playlist_merge](public/DEMO-playlist_merge.gif)
 
 ## Tech Stack
 
